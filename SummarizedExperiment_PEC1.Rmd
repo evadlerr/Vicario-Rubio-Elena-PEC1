@@ -1,0 +1,108 @@
+---
+title: "data-PEC1"
+author: "Elena Vicario Rubio"
+date: "2025-04-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Creacion del SummarizedExperiment
+
+```{r}
+# Importamos las librerías
+library(SummarizedExperiment)
+library(readr)   
+library(dplyr)
+library(tibble)
+library(S4Vectors)
+
+## Creamos las rutas a tus archivos
+assay_data <- "data/mtb.tsv"
+sample_md <- "data/metadata.tsv"
+feature_data <- "data/mtb.map.tsv"
+SummarizedExperiment_PEC1 <- "data/SummarizedExperiment_PEC1.Rda"
+
+# Cargamos los datos del Assay
+assay_data_crudo <- read_tsv(assay_data, show_col_types = FALSE)
+head(assay_data_crudo[, 1:6])
+
+## Convertimos en una matriz de datos con los nombres de las muestras
+sample_ids <- assay_data_crudo[[1]]
+assay_matriz <- as.matrix(assay_data_crudo[, -1])
+rownames(assay_matriz) <- sample_ids
+
+## Transponemos los metabolitos en filas y las muestras en columnas
+assay_matriz_metabolitos_filas <- t(assay_matriz)
+
+# Cargamos los datos del colData
+sample_md_crudo <- read_tsv(sample_md, show_col_types = FALSE)
+
+## Nos aseguramos de que no haya duplicados, convertimos la columna sample y a dataframe con s4vectors
+sample_md_meta <- sample_md_crudo %>%
+  distinct(Sample, .keep_all = TRUE) %>%
+  column_to_rownames("Sample") %>%
+  DataFrame()
+
+# Cargamos los datos del rowData
+feature_data_crudo <- read_tsv(feature_data, show_col_types = FALSE)
+
+## Nos aseguramos de que no haya duplicados, convertimos la columna compound y a dataframe con s4vectors
+feature_data_meta <- feature_data_crudo %>%
+  distinct(Compound, .keep_all = TRUE) %>%
+  column_to_rownames("Compound") %>%
+  DataFrame()
+
+# Nos aseguramos que hemos convertido bien los dataframe
+muestras <- intersect(colnames(assay_matriz_metabolitos_filas), rownames(sample_md_meta))
+features <- intersect(rownames(assay_matriz_metabolitos_filas), rownames(feature_data_meta))
+
+## Reordenamos la matriz
+assay_final <- assay_matriz_metabolitos_filas[features, muestras]
+colData_final <- sample_md_meta[muestras, ]
+rowData_final <- feature_data_meta[features, ]
+
+# Creamos el objeto SummarizedExperiment
+se <- SummarizedExperiment(
+  assays = list(counts = assay_final),
+  colData = colData_final,
+  rowData = rowData_final)
+
+# Exploramos el SummarizedExperiment
+se
+dim(se)
+assayNames(se)
+head(colData(se))
+head(rowData(se))
+
+# Guardamos el SummarizedExperiment
+save(se, file = SummarizedExperiment_PEC1)
+```
+
+### Referencias:
+
+-   *An Overview of the S4Vectors package*. (s. f.). Recuperado 1 de abril de 2025, de <https://bioconductor.org/packages/release/bioc/vignettes/S4Vectors/inst/doc/S4VectorsOverview.html>
+
+-   *Borenstein-lab microbiome-metabolome-curated-data*. (s. f.). GitHub. Recuperado 1 de abril de 2025, de <https://github.com/borenstein-lab/microbiome-metabolome-curated-data/wiki/Home>
+
+-   *Data types in R*. (2020, abril 18). RCODER. <https://r-coder.com/data-types-r/>
+
+-   *intersect function—RDocumentation*. (s. f.). Recuperado 1 de abril de 2025, de <https://www.rdocumentation.org/packages/prob/versions/1.0-1/topics/intersect>
+
+-   *Keep distinct/unique rows—Distinct*. (s. f.). Recuperado 1 de abril de 2025, de <https://dplyr.tidyverse.org/reference/distinct.html>
+
+-   *Operaciones con matrices en R*. (2020, septiembre 20). RCODER. <https://r-coder.com/operaciones-matrices-r/>
+
+-   *Read a delimited file (including CSV and TSV) into a tibble—Read_delim • readr*. (s. f.). Recuperado 1 de abril de 2025, de <https://readr.tidyverse.org/reference/read_delim.html>
+
+-   *Read Rectangular Text Data*. (s. f.). Recuperado 1 de abril de 2025, de <https://readr.tidyverse.org/>
+
+-   *S4Vectors*. (s. f.). Bioconductor. Recuperado 1 de abril de 2025, de <http://bioconductor.org/packages/S4Vectors/>
+
+-   *Simple Data Frames*. (s. f.). Recuperado 1 de abril de 2025, de <https://tibble.tidyverse.org/>
+
+-   *SummarizedExperiment*. (s. f.). Bioconductor. Recuperado 1 de abril de 2025, de <http://bioconductor.org/packages/SummarizedExperiment/>
+
+-   *SummarizedExperiment for Coordinating Experimental Assays, Samples, and Regions of Interest*. (s. f.). Recuperado 1 de abril de 2025, de <https://www.bioconductor.org/packages/devel/bioc/vignettes/SummarizedExperiment/inst/doc/SummarizedExperiment.html>
